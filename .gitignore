@@ -1,30 +1,58 @@
 
-# Python cache files
+# Python cache files (all folders)
 __pycache__/
+**/__pycache__/
 *.py[cod]
-*$py.class
 
-# Testing
+# Pytest cache (all folders)
 .pytest_cache/
+**/.pytest_cache/
+
+# Test and coverage files
 .coverage
+.coverage.*
 htmlcov/
 
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
 # Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# Logs
-*.log
+# Build and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+
+# Python tools
+.mypy_cache/
+.pytype/
+.ruff_cache/
+.dmypy.json
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints/
 
 # IDE settings
 .vscode/
+.idea/
 
-# OS files
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Operating system files
 .DS_Store
 Thumbs.db
+Desktop.ini
