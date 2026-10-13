@@ -31,8 +31,8 @@ def _api_base() -> str:
 
 
 def _credentials() -> tuple[str, str]:
-    client_id = os.getenv("PAYPAL_CLIENT_ID", "BAAj16DlFUvO9zn_bxnUlxBMp9OqYpvXRbJ1GCOmRnOOC6nIKPMoRCwPCPI6RIKkgnMk2F4iXNW6TcGHcQ").strip()
-    secret = os.getenv("PAYPAL_CLIENT_SECRET", "ECJOGYyZSQ_0sStHmrASEdfyGRAEWPS0bW9ysDjiIMvUTFpPv3mj34NLuLlyqGTbTsz_tkW0Yz9Mv3MC").strip()
+    client_id = os.getenv("PAYPAL_CLIENT_ID", "").strip()
+    secret = os.getenv("PAYPAL_CLIENT_SECRET", "").strip()
     if not client_id or not secret:
         raise PayPalError("Set PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET in your environment.")
     return client_id, secret
@@ -115,7 +115,7 @@ def create_checkout(decision: dict[str, Any], *, currency: str | None = None,
     if not isinstance(scope, list) or not scope or any(not isinstance(item, str) for item in scope):
         raise PayPalError("Accepted negotiation must contain a non-empty, valid scope.")
     amount = _money(decision.get("price"))
-    currency_code = (currency or os.getenv("PAYPAL_CURRENCY", "USD")).strip().upper()
+    currency_code = (currency or os.getenv("PAYPAL_CURRENCY", "")).strip().upper()
     if not re.fullmatch(r"[A-Z]{3}", currency_code):
         raise PayPalError("Set PAYPAL_CURRENCY to a three-letter currency code, such as USD or PHP.")
     return_url = return_url or os.getenv("PAYPAL_RETURN_URL", "http://localhost:8000/paypal/return")
