@@ -1,58 +1,146 @@
 
-# Python cache files (all folders)
+# ==============================
+# Python bytecode and cache
+# ==============================
 __pycache__/
-**/__pycache__/
 *.py[cod]
+*$py.class
+*.pyd
+*.so
 
-# Pytest cache (all folders)
-.pytest_cache/
-**/.pytest_cache/
-
-# Test and coverage files
-.coverage
-.coverage.*
-htmlcov/
-
-# Virtual environments
+# ==============================
+# Python virtual environments
+# ==============================
 .venv/
 venv/
 env/
 ENV/
+.python-version
 
-# Environment variables and secrets
+# ==============================
+# Environment variables / secrets
+# ==============================
 .env
 .env.*
 !.env.example
+!.env.paypal.example
+!.env.test
+!.env.development.example
 
-# Build and distribution
-build/
-dist/
-*.egg-info/
-.eggs/
-wheels/
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
 
-# Python tools
+# ==============================
+# PayPal / API secrets
+# ==============================
+secrets.json
+credentials.json
+service-account*.json
+paypal_credentials.json
+
+# ==============================
+# Testing and coverage
+# ==============================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+test-results/
+junit.xml
+coverage.xml
+
+# ==============================
+# Type checking / linting
+# ==============================
 .mypy_cache/
 .pytype/
-.ruff_cache/
-.dmypy.json
 .pyre/
+.ruff_cache/
 
+# ==============================
+# Build / packaging
+# ==============================
+build/
+dist/
+site/
+.eggs/
+*.egg
+*.egg-info/
+wheels/
+pip-wheel-metadata/
+
+# ==============================
+# Python package manager
+# ==============================
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock.tmp
+
+# ==============================
 # Jupyter
+# ==============================
 .ipynb_checkpoints/
 
-# IDE settings
-.vscode/
-.idea/
-
+# ==============================
 # Logs and temporary files
+# ==============================
 *.log
+logs/
+tmp/
+temp/
 *.tmp
 *.bak
 *.swp
 *.swo
+*~
 
-# Operating system files
+# ==============================
+# VS Code
+# ==============================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ==============================
+# JetBrains IDEs
+# ==============================
+.idea/
+
+# ==============================
+# Windows / macOS / Linux
+# ==============================
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
+Thumbs.db:encryptable
 Desktop.ini
+$RECYCLE.BIN/
+.Trashes/
+.fseventsd/
+
+# ==============================
+# Local databases
+# ==============================
+*.sqlite
+*.sqlite3
+*.db
+
+# ==============================
+# Local environment / debugging
+# ==============================
+.python_history
+.dmypy.json
+pyrightconfig.local.json
+
+# ==============================
+# Generated documentation
+# ==============================
+docs/_build/

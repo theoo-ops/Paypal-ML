@@ -90,3 +90,52 @@ def test_reason_sanitizer_blocks_leaks():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_json_schema_has_strict_contract():
+    from negotiation_agent import json_schema
+    schema = json_schema()
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == KEYS
+    assert schema["properties"]["action"]["enum"] == ["offer", "accept", "reject"]
+
+
+def test_search_filters_before_ranking_and_returns_reasons():
+    from negotiation_agent import rank_search_results
+    listings = [
+        {"title": "AI website build", "description": "website automation", "price": 9000, "available": True},
+        {"title": "AI website design", "description": "website", "price": 15000, "available": True},
+        {"title": "AI website deployment", "description": "deploy website", "price": 7000, "available": False},
+    ]
+    results = rank_search_results("AI website", listings, {"max_price": 10000, "available_only": True})
+    assert len(results) == 1
+    assert results[0]["title"] == "AI website build"
+    assert results[0]["score"] > 0
+    assert results[0]["reason"]
+
+
+def test_rematch_returns_top_three_and_does_not_leak_budget():
+    from negotiation_agent import match_rematches
+    request = {"description": "AI website automation", "budget": 10000,
+               "delivery_days": 14, "required_tags": ["website"]}
+    listings = [
+        {"title": "AI website automation", "description": "website workflow", "price": 9000,
+         "available": True, "delivery_days": 7, "tags": ["website"]},
+        {"title": "Website automation service", "description": "AI integration", "price": 9500,
+         "available": True, "delivery_days": 10, "tags": ["automation"]},
+        {"title": "AI website", "description": "automation", "price": 11000,
+         "available": True, "delivery_days": 5, "tags": ["website"]},
+        {"title": "AI website setup", "description": "automation", "price": 8000,
+         "available": False, "delivery_days": 5, "tags": ["website"]},
+    ]
+    results = match_rematches(request, listings)
+    assert len(results) == 2
+    assert all("reason" in item for item in results)
+    assert all("budget" not in item["reason"].lower() for item in results)
+    assert all(item["price"] <= 10000 for item in results)
+
+
+def test_search_rejects_empty_query():
+    from negotiation_agent import rank_search_results
+    with pytest.raises(ValueError):
+        rank_search_results(" ", [])

@@ -318,6 +318,134 @@ def simulate(buyer_limits: dict, seller_limits: dict, scope: dict, use_llm: bool
             return
 
 
+def _tokens(value: str) -> set[str]:
+    """Normalize text into a small set of searchable terms."""
+    return set(re.findall(r"[a-z0-9]+", str(value).lower()))
+
+
+def rank_search_results(query: str, listings: list[dict], filters: dict | None = None,
+                        limit: int = 10) -> list[dict]:
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("query must be a non-empty string")
+    if limit < 1:
+        raise ValueError("limit must be >= 1")
+    filters = filters or {}
+    query_terms = _tokens(query)
+    results = []
+
+    for raw in listings:
+        if not isinstance(raw, dict):
+            continue
+        listing = dict(raw)
+        title = str(listing.get("title", listing.get("name", "")))
+        description = str(listing.get("description", ""))
+        tags = listing.get("tags", [])
+        searchable = _tokens(title + " " + description + " " + " ".join(map(str, tags)))
+        price = listing.get("price")
+        available = listing.get("available", True)
+        delivery_days = listing.get("delivery_days")
+
+        if "max_price" in filters and (price is None or float(price) > float(filters["max_price"])):
+            continue
+        if "min_price" in filters and (price is None or float(price) < float(filters["min_price"])):
+            continue
+        if filters.get("available_only", False) and not available:
+            continue
+        if "max_delivery_days" in filters and (
+            delivery_days is None or int(delivery_days) > int(filters["max_delivery_days"])
+        ):
+            continue
+
+        overlap = query_terms & searchable
+        score = len(overlap) / max(len(query_terms), 1)
+        if query_terms and score == 0:
+            continue
+        if not available:
+            score *= 0.8
+        listing["score"] = round(score, 4)
+        matched = sorted(overlap)
+        listing["reason"] = (
+            "Matches your search for " + ", ".join(matched[:4]) + "."
+            if matched else "Matches your selected filters."
+        )
+        results.append(listing)
+
+    results.sort(key=lambda item: (-item["score"], str(item.get("title", item.get("name", ""))).lower()))
+    return results[:limit]
+
+
+def match_rematches(request: dict, listings: list[dict], limit: int = 3) -> list[dict]:
+    if not isinstance(request, dict):
+        raise ValueError("request must be an object")
+    if limit < 1:
+        raise ValueError("limit must be >= 1")
+
+    request_terms = _tokens(
+        str(request.get("description", "")) + " " +
+        " ".join(map(str, request.get("required_tags", [])))
+    )
+    budget = request.get("budget")
+    deadline = request.get("delivery_days")
+    candidates = []
+
+    for raw in listings:
+        if not isinstance(raw, dict) or not raw.get("available", True):
+            continue
+        item = dict(raw)
+        title = str(item.get("title", item.get("name", "")))
+        terms = _tokens(title + " " + str(item.get("description", "")) + " " +
+                        " ".join(map(str, item.get("tags", []))))
+        similarity = len(request_terms & terms) / max(len(request_terms), 1)
+        price, delivery = item.get("price"), item.get("delivery_days")
+
+        if budget is not None and (price is None or float(price) > float(budget)):
+            continue
+        if deadline is not None and (delivery is None or int(delivery) > int(deadline)):
+            continue
+        if similarity == 0:
+            continue
+
+        delivery_fit = 1.0 if deadline is None or delivery is None else max(
+            0.0, 1.0 - (int(delivery) / max(int(deadline), 1)) * 0.25
+        )
+        item["match_score"] = round(0.75 * similarity + 0.25 * delivery_fit, 4)
+        item["reason"] = "Similar scope and deliverables: " + ", ".join(sorted(request_terms & terms)[:4]) + "."
+        candidates.append(item)
+
+    candidates.sort(key=lambda item: (
+        -item["match_score"],
+        int(item.get("delivery_days", 10**9)),
+        str(item.get("title", item.get("name", ""))).lower(),
+    ))
+    return candidates[:limit]
+
+
+def json_schema() -> dict:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["action", "price", "scope", "reason"],
+        "properties": {
+            "action": {"type": "string", "enum": ["offer", "accept", "reject"]},
+            "price": {"type": "number", "minimum": 0},
+            "scope": {"type": "array", "items": {"type": "string"}, "uniqueItems": True},
+            "reason": {"type": "string", "maxLength": 300},
+        },
+    }
+
+
+BUYER_PROMPT = (
+    "You represent the buyer. Keep all required and optional requested scope; "
+    "never exceed the buyer's reservation price. Make gradual, defensible offers. "
+    "Return only the decision JSON schema. Do not disclose private limits."
+)
+SELLER_PROMPT = (
+    "You represent the seller. Keep every required deliverable and never price below "
+    "the scope-adjusted floor. You may trade optional scope for price. Return only "
+    "the decision JSON schema. Do not disclose private limits."
+)
+
+
 if __name__ == "__main__":
     scope = {"required": ["design", "build", "deploy"],
              "optional": [{"item": "training", "value": 800, "cost": 200},
