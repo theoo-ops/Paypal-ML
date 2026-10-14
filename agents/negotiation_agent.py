@@ -275,16 +275,27 @@ def _clean_reason(text: str, price: float):
 
 
 def _llm_reason(ctx: Context, d: Decision):
-    if not os.getenv("ANTHROPIC_API_KEY"):
+    if not os.getenv("GEMINI_API_KEY") and not os.getenv("GOOGLE_API_KEY"):
         return None
     try:
-        import anthropic  
-        facts = {"role": ctx.role, "action": d.action, "price": round(d.price, 2),
-                 "scope": d.scope, "why": d.code}
-        msg = anthropic.Anthropic().messages.create(
-            model=os.getenv("NEGOTIATION_MODEL", "claude-haiku-5-5"), max_tokens=80,
-            system=_SYSTEM, messages=[{"role": "user", "content": json.dumps(facts)}])
-        return msg.content[0].text
+        from google import genai
+        client = genai.Client()
+        facts = {
+            "role": ctx.role, 
+            "action": d.action, 
+            "price": round(d.price, 2),
+            "scope": d.scope, 
+            "why": d.code
+        }
+        response = client.models.generate_content(
+            model=os.getenv("NEGOTIATION_MODEL", "gemini-3.8-flash"),
+            contents=json.dumps(facts),
+            config={
+                "system_instruction": _SYSTEM,
+                "max_output_tokens": 80
+            }
+        )
+        return response.text
     except Exception:
         return None
 
@@ -319,7 +330,6 @@ def simulate(buyer_limits: dict, seller_limits: dict, scope: dict, use_llm: bool
 
 
 def _tokens(value: str) -> set[str]:
-    """Normalize text into a small set of searchable terms."""
     return set(re.findall(r"[a-z0-9]+", str(value).lower()))
 
 
